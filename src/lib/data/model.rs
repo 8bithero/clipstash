@@ -31,7 +31,42 @@ impl TryFrom<Clip> for crate::domain::Clip {
             password: field::Password::new(clip.password.unwrap_or_default())?,
             hits: field::Hits::new(u64::try_from(clip.hits)?),
         }
-
         )
     }
+}
+
+pub struct GetClip {
+    pub(in crate::data) shortcode: String,
+}
+
+impl From<ShortCode> for GetClip {
+    fn from(shortcode: ShortCode) -> Self {
+        GetClip {
+            shortcode: shortcode.into_inner()
+        }
+    }
+}
+
+impl From<String> for GetClip {
+    fn from(shortcode: String) -> Self {
+        GetClip { shortcode }
+    }
+}
+
+pub struct NewClip {
+    pub(in crate::data) clip_id: String,
+    pub(in crate::data) shortcode: String,
+    pub(in crate::data) content: String,
+    pub(in crate::data) title: Option<String>,
+    pub(in crate::data) posted: i64,
+    pub(in crate::data) expires: Option<NaiveDateTime>,
+    pub(in crate::data) password: Option<String>,
+}
+
+pub struct UpdateClip {
+    pub(in crate::data) shortcode: String,
+    pub(in crate::data) content: String,
+    pub(in crate::data) title: Option<String>,
+    pub(in crate::data) expires: Option<i64>,
+    pub(in crate::data) password: Option<String>,
 }
