@@ -1,24 +1,24 @@
-use crate::data::DdId;
+use crate::data::DbId;
 use derive_more::Constructor;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Constructor, Debug, Deserialize, Serialize)]
-pub struct ClipId(DdId);
+pub struct ClipId(DbId);
 
 impl ClipId {
-    pub fn into_inner(self) -> DdId {
+    pub fn into_inner(self) -> DbId {
         self.0
     }
 }
 
-impl From<DdId> for ClipId {
-    fn from(id: DdId) -> Self {
+impl From<DbId> for ClipId {
+    fn from(id: DbId) -> Self {
         Self(id)
     }
 }
 
 impl Default for ClipId {
     fn default() -> Self {
-        Self(DdId::nil())
+        Self(DbId::nil())
     }
 }
