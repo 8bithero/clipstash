@@ -1,10 +1,11 @@
 use crate::domain::clip::ClipError;
 use derive_more::From;
 use serde::{Deserialize, Serialize};
+use rocket::{UriDisplayPath, UriDisplayQuery};
 use rocket::request::FromParam;
 use std::str::FromStr;
 
-#[derive(Clone, Debug, Deserialize, Serialize, From)]
+#[derive(Clone, Debug, Deserialize, Serialize, From, UriDisplayPath, UriDisplayQuery)]
 pub struct ShortCode(String);
 
 impl ShortCode {
