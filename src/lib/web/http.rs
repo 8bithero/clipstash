@@ -10,9 +10,6 @@ use rocket::http::{Cookie, CookieJar, Status};
 use rocket::response::content::{self, RawHtml};
 use rocket::response::{status, Redirect};
 use rocket::{uri, State};
-use serde::Serialize;
-use sqlx::database;
-use uuid::timestamp::context;
 
 #[rocket::get("/")]
 fn home(renderer: &State<Renderer<'_>>) -> RawHtml<String> {
@@ -215,5 +212,79 @@ pub mod catcher {
 
     pub fn catchers() -> Vec<Catcher> {
         catchers![default, internal_error, not_found]
+    }
+}
+
+#[cfg(test)]
+pub mod test {
+    use crate::{data::AppDatabase, web::test::init_test_client};
+    use rocket::http::Status;
+
+    #[test]
+    fn gets_home() {
+        let (_, client) = init_test_client();
+
+        let response = client.get("/").dispatch();
+        assert_eq!(response.status(), Status::Ok);
+    }
+
+    #[test]
+    fn error_on_missing_clip() {
+        let (_, client) = init_test_client();
+
+        let response = client.get("/clip/aasldfjkasldgkj").dispatch();
+        assert_eq!(response.status(), Status::NotFound);
+    }
+
+    #[test]
+    fn requires_password_when_applicable() {
+        use crate::domain::clip::field::{Content, Expires, Password, Title};
+        use crate::service;
+        use rocket::http::{ContentType, Cookie};
+
+        let (rt, client) = init_test_client();
+
+        let db = client.rocket().state::<AppDatabase>().unwrap();
+
+        let req = service::ask::NewClip {
+            content: Content::new("content").unwrap(),
+            expires: Expires::default(),
+            password: Password::new("123".to_owned()).unwrap(),
+            title: Title::default(),
+        };
+        let clip = rt
+            .block_on(async move { service::action::new_clip(req, db.get_pool()).await })
+            .unwrap();
+
+        // Block clip when no password is provided
+        let response = client
+            .get(format!("/clip/{}", clip.shortcode.as_str()))
+            .dispatch();
+        assert_eq!(response.status(), Status::Unauthorized);
+        let response = client
+            .get(format!("/clip/raw/{}", clip.shortcode.as_str()))
+            .dispatch();
+        assert_eq!(response.status(), Status::Unauthorized);
+
+        // Get clip when the password is provided
+        let response = client
+            .post(format!("/clip/{}", clip.shortcode.as_str()))
+            .header(ContentType::Form)
+            .body("password=123")
+            .dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        // Get clip when the password is provided
+        let response = client
+            .get(format!("/clip/raw/{}", clip.shortcode.as_str()))
+            .cookie(Cookie::new("password", "123"))
+            .dispatch();
+        assert_eq!(response.status(), Status::Ok);
+
+        // Get clip when the password is provided, but incorrect
+        let response = client
+            .get(format!("/clip/raw/{}", clip.shortcode.as_str()))
+            .cookie(Cookie::new("password", "abc"))
+            .dispatch();
+        assert_eq!(response.status(), Status::Unauthorized);
     }
 }
